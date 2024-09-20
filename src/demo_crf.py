@@ -29,7 +29,9 @@ def main(args: argparse.Namespace):
         sentences = [wordseq.split()]
 
         # Predict tags
-        tagseqs = CRFPosTagger.predict_crf(sentences, args.model_path, use_beam_search=True)
+        crf_tagger = CRFPosTagger()
+
+        tagseqs = crf_tagger.predict_crf(sentences, args.model_path)
         
         if tagseqs:
             tagseq = tagseqs[0]  # Get the tags for the single input sentence
