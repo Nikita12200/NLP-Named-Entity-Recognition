@@ -1,4 +1,4 @@
-from src.pos_tagger import load_brown_corpus, HMMPosTagger
+from src.crf_pos_tag import load_brown_corpus, CRFPosTagger
 from sklearn.model_selection import KFold
 from sklearn.metrics import (
     accuracy_score,
@@ -11,8 +11,10 @@ import numpy as np
 
 
 def evaluate_predictions(test_tagseqs, test_preds):
-    test_tags_flat = [tag for tagseq in test_tagseqs for tag in tagseq.lower().split()]
-    preds_flat = [tag for pred in test_preds for tag in pred.lower().split()]
+
+    # Flatten test_tagseqs and preds while ensuring each tag is a string
+    test_tags_flat = [tag for tagseq in test_tagseqs for tag in tagseq]  # No need to lower case here
+    preds_flat = [tag for pred in test_preds for tag in pred]  # No need to lower case here
 
     accuracy = accuracy_score(test_tags_flat, preds_flat)
     precision, recall, f1, _ = precision_recall_fscore_support(
@@ -34,14 +36,14 @@ def main(args: argparse.Namespace):
     ):
         print(f"Evaluating Fold {fold_idx + 1}/{args.k}")
 
-        train_ds = [dataset[idx] for idx in train_ids]
-        test_ds = [dataset[idx] for idx in test_ids]
+        train_ds = [dataset[idx] for idx in train_ids][:10]
+        test_ds = [dataset[idx] for idx in test_ids][:10]
 
-        tagger = HMMPosTagger()
-        tagger.train(train_ds, smoothing=args.smoothing_technique)
+        tagger = CRFPosTagger()
+        tagger.train_crf(train_ds, smoothing=args.smoothing_technique)
 
         test_tagseqs = [tagseq for _, tagseq in test_ds]
-        test_preds = [tagger.predict(wordseq) for wordseq, _ in test_ds]
+        test_preds = tagger.predict_crf([wordseq for wordseq, _ in test_ds],args.model_path)
 
         accuracy, precision, recall, f1, cm, class_report = evaluate_predictions(
             test_tagseqs, test_preds
@@ -62,6 +64,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--dataset-path", type=str, required=True)
     parser.add_argument("-k", "--k", type=int, default=5)
+    parser.add_argument("-m", "--model-path", type=str)
     parser.add_argument(
         "-t",
         "--smoothing-technique",

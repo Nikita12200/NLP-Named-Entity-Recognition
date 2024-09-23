@@ -63,10 +63,10 @@ class CRFPosTagger:
             'has_hyphen': '-' in word,
             'is_numeric': word.isdigit(),
             'capitals_inside': word[1:].lower() != word[1:],
-            'word_freq': self.word_to_freq_map.get(word.lower(), 0),  # Use frequency map
-            'word_cluster': self.word_to_cluster_map.get(word.lower(), 'UNK'),  # Use cluster map
+            # 'word_freq': self.word_to_freq_map.get(word.lower(), 0),  # Use frequency map
+            # 'word_cluster': self.word_to_cluster_map.get(word.lower(), 'UNK'),  # Use cluster map
             'lemma': self.lemmatizer.lemmatize(word.lower()) if self.lemmatizer else word.lower(),  # Use lemmatizer
-            'prev_tag': prev_tag if prev_tag else 'START'
+            # 'prev_tag': prev_tag if prev_tag else 'START'
         }
         return features
 
@@ -134,6 +134,43 @@ class CRFPosTagger:
             predictions.append(predicted_tags)
         
         return predictions
+    # def predict_with_beam_search(self, sentences: List[List[str]], model_path: str, beam_width: int = 3) -> List[List[str]]:
+    #     tagger = pycrfsuite.Tagger()
+    #     tagger.open(model_path)
+
+    #     # Extract possible tags from the model's state information
+    #     possible_tags = list(tagger.labels())
+
+    #     predictions = []
+
+    #     for sentence in sentences:
+    #         # Extract features for the entire sentence
+    #         sentence_features = [self.word2features(sentence, i) for i in range(len(sentence))]
+
+    #         # Initialize beam with (score, path)
+    #         beam = [(0.0, [])]  # (log-probability, list of tags)
+
+    #         for i in range(len(sentence)):
+    #             new_beam = []
+
+    #             # For each sequence in the beam, expand it by adding one more tag
+    #             for score, tags in beam:
+    #                 for tag in possible_tags:
+    #                     # Calculate the marginal probability of the tag at position i
+    #                     tagger.set(sentence_features)
+    #                     tag_score = tagger.marginal(tag, i)
+    #                     new_score = score + tag_score
+
+    #                     new_beam.append((new_score, tags + [tag]))
+
+    #             # Sort new beam candidates by score and keep the top `beam_width` entries
+    #             beam = sorted(new_beam, key=lambda x: x[0], reverse=True)[:beam_width]
+
+    #         # The highest-scoring sequence is the first in the sorted beam
+    #         best_score, best_tags = beam[0]
+    #         predictions.append(best_tags)
+
+    #     return predictions
 
 # Example usage
 crf_tagger = CRFPosTagger()
