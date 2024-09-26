@@ -87,7 +87,7 @@ class CRFPosTagger:
 
     def train_crf(self, data: List[Tuple[List[str], List[str]]], smoothing: str = "kneser_nay") -> pycrfsuite.Trainer:
         print('Inside train_crf')
-        trainer = pycrfsuite.Trainer(verbose=False)
+        trainer = pycrfsuite.Trainer(algorithm='lbfgs',verbose=False)
         
         for sentence, tags in data:
             for word in sentence:
@@ -100,16 +100,18 @@ class CRFPosTagger:
             trainer.append(features, tags)
         
         params = {
+
             'c1': 1.0,
-            'c2': 1e-3,
-            'max_iterations': 100,
+            'c2': 1e-6,
+            'max_iterations': 1000,
+            # 'variance': 1.0
             'feature.possible_transitions': True
         }
         
-        if smoothing == "laplace":
-            params['c1'] = 1.0
-        elif smoothing == "kneser_nay":
-            params['c2'] = 1e-2
+        # if smoothing == "laplace":
+        #     params['c1'] = 1.0
+        # elif smoothing == "kneser_nay":
+        #     params['c2'] = 1e-2
         
         trainer.set_params(params)
         # 

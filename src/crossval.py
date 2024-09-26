@@ -10,24 +10,28 @@ import argparse
 import numpy as np
 
 
-def evaluate_predictions(test_tagseqs, test_preds):
+def evaluate_predictions(test_tagseqs, test_preds, all_labels):
 
     # Flatten test_tagseqs and preds while ensuring each tag is a string
-    test_tags_flat = [tag for tagseq in test_tagseqs for tag in tagseq]  # No need to lower case here
-    preds_flat = [tag for pred in test_preds for tag in pred]  # No need to lower case here
+    test_tags_flat = [tag for tagseq in test_tagseqs for tag in tagseq]
+    preds_flat = [tag for pred in test_preds for tag in pred]
 
     accuracy = accuracy_score(test_tags_flat, preds_flat)
     precision, recall, f1, _ = precision_recall_fscore_support(
-        test_tags_flat, preds_flat, average="weighted"
+        test_tags_flat, preds_flat, average="weighted", zero_division=1
     )
-    cm = confusion_matrix(test_tags_flat, preds_flat)
-    class_report = classification_report(test_tags_flat, preds_flat)
+    cm = confusion_matrix(test_tags_flat, preds_flat, labels=all_labels)
+    class_report = classification_report(test_tags_flat, preds_flat, labels=all_labels, zero_division=1)
+
     return accuracy, precision, recall, f1, cm, class_report
 
 
 def main(args: argparse.Namespace):
     wordseqs, tagseqs = load_brown_corpus(args.dataset_path)
     dataset = list(zip(wordseqs, tagseqs))
+
+    # Extract all unique labels in the dataset
+    all_labels = sorted({tag for tags in tagseqs for tag in tags})
 
     kf = KFold(args.k, random_state=42, shuffle=True)
 
@@ -36,17 +40,17 @@ def main(args: argparse.Namespace):
     ):
         print(f"Evaluating Fold {fold_idx + 1}/{args.k}")
 
-        train_ds = [dataset[idx] for idx in train_ids][:10]
-        test_ds = [dataset[idx] for idx in test_ids][:10]
+        train_ds = [dataset[idx] for idx in train_ids][:300]
+        test_ds = [dataset[idx] for idx in test_ids][:50]
 
         tagger = CRFPosTagger()
         tagger.train_crf(train_ds, smoothing=args.smoothing_technique)
 
         test_tagseqs = [tagseq for _, tagseq in test_ds]
-        test_preds = tagger.predict_crf([wordseq for wordseq, _ in test_ds],args.model_path)
+        test_preds = tagger.predict_crf([wordseq for wordseq, _ in test_ds], args.model_path)
 
         accuracy, precision, recall, f1, cm, class_report = evaluate_predictions(
-            test_tagseqs, test_preds
+            test_tagseqs, test_preds, all_labels
         )
 
         print(f"Fold {fold_idx + 1} Results:")
