@@ -23,6 +23,8 @@ class CRFPosTagger:
         self.word_to_freq_map = defaultdict(int)
         self.word_to_cluster_map = {}
         self.lemmatizer = WordNetLemmatizer()  # Initialize the lemmatizer
+        self.unk_tag = 'UNK'
+        # self.freq_threshold= 3
 
     def save_resources(self, freq_map_path: str, cluster_map_path: str, lemmatizer_path: str):
         with open(freq_map_path, 'wb') as f:
@@ -42,6 +44,8 @@ class CRFPosTagger:
 
     def word2features(self, sentence: List[str], i: int,prev_tag: str = None) -> dict:
         word = sentence[i]
+        # if self.word_to_freq_map[word.lower()] < self.freq_threshold:
+        #     word = self.unk_tag
         features = {
             'bias': 1.0,
             'word.lower()': word.lower(),
@@ -63,11 +67,10 @@ class CRFPosTagger:
             'has_hyphen': '-' in word,
             'is_numeric': word.isdigit(),
             'capitals_inside': word[1:].lower() != word[1:],
-            # 'word_freq': self.word_to_freq_map.get(word.lower(), 0),  # Use frequency map
-            # 'word_cluster': self.word_to_cluster_map.get(word.lower(), 'UNK'),  # Use cluster map
-            'lemma': self.lemmatizer.lemmatize(word.lower()) if self.lemmatizer else word.lower(),  # Use lemmatizer
-            # 'prev_tag': prev_tag if prev_tag else 'START'
+            # 'lemma': self.lemmatizer.lemmatize(word.lower()) if self.lemmatizer else word.lower(),  # Use lemmatizer
+            # 'is_unknown': word.lower() not in self.word_to_freq_map,
         }
+    
         return features
 
     # @staticmethod
@@ -75,9 +78,6 @@ class CRFPosTagger:
         features = []
         prev_tag = 'START'  # Initialize previous tag as 'START' for the first word
         for i in range(len(sentence)):
-            # Check if tags are provided (for training). If not, continue using 'START' or the previous tag.
-            if tags:
-                prev_tag = tags[i - 1] if i > 0 else 'START'  # Use tags only if they are available
             features.append(self.word2features(sentence, i, prev_tag))
         return features
 
@@ -85,17 +85,18 @@ class CRFPosTagger:
     def sent2labels(labels: List[str]) -> List[str]:
         return labels
 
-    def train_crf(self, data: List[Tuple[List[str], List[str]]], smoothing: str = "kneser_nay") -> pycrfsuite.Trainer:
+    def train_crf(self, data: List[Tuple[List[str], List[str]]]) -> pycrfsuite.Trainer:
         print('Inside train_crf')
         trainer = pycrfsuite.Trainer(algorithm='lbfgs',verbose=False)
-        
+        count=0
+        sent=0
         for sentence, tags in data:
+            sent=sent+1
             for word in sentence:
-                # Update frequency map
                 self.word_to_freq_map[word.lower()] += 1
-                # Update cluster map (simple example, replace with actual clustering logic)
-                self.word_to_cluster_map[word.lower()] = hash(word) % 10  # Simple hash for clustering
-            
+                count=count+1
+        print('total number of sentences and words in the corpus',sent,count)
+        for sentence, tags in data:
             features = self.sent2features(sentence,tags)
             trainer.append(features, tags)
         
@@ -104,14 +105,9 @@ class CRFPosTagger:
             'c1': 1.0,
             'c2': 1e-6,
             'max_iterations': 1000,
-            # 'variance': 1.0
             'feature.possible_transitions': True
         }
         
-        # if smoothing == "laplace":
-        #     params['c1'] = 1.0
-        # elif smoothing == "kneser_nay":
-        #     params['c2'] = 1e-2
         
         trainer.set_params(params)
         # 
@@ -124,72 +120,62 @@ class CRFPosTagger:
                             '/home/nikita/crf_pos/assignment_1/assets/cluster_map.pkl', 
                             '/home/nikita/crf_pos/assignment_1/assets/lemmatizer.pkl')
         print("Resources saved.")
-    # @staticmethod
-    def predict_crf(self, sentences: List[List[str]], model_path: str) -> List[List[str]]:
+
+    def predict_crf(self, sentences: List[List[str]], model_path: str, beam_width: int = 2) -> List[List[str]]:
         tagger = pycrfsuite.Tagger()
         tagger.open(model_path)
+        # self.load_resources('/home/nikita/crf_pos/assignment_1/assets/freq_map.pkl', 
+        #                        '/home/nikita/crf_pos/assignment_1/assets/cluster_map.pkl', 
+        #                        '/home/nikita/crf_pos/assignment_1/assets/lemmatizer.pkl')
         
+        # Extract possible tags from the model's state information
+        possible_tags = list(tagger.labels())
+        print(possible_tags)
+
         predictions = []
+
         for sentence in sentences:
-            features = self.sent2features(sentence)
-            predicted_tags = tagger.tag(features)
-            predictions.append(predicted_tags)
-        
+            # Extract features for the entire sentence
+            sentence_features = [self.word2features(sentence, i) for i in range(len(sentence))]
+
+            # Initialize beam with (score, path)
+            beam = [(0.0, [])]  # (log-probability, list of tags)
+
+            for i in range(len(sentence)):
+                new_beam = []
+
+                # For each sequence in the beam, expand it by adding one more tag
+                for score, tags in beam:
+                    # if sentence[i].lower() not in self.word_to_freq_map:
+                    #     # print('NOT IN DATASET',sentence[i])
+                    #     new_beam.append((score, tags +['UNK']))
+                    #     continue
+
+                    for tag in possible_tags:
+                        # Calculate the marginal probability of the tag at position i
+                        tagger.set(sentence_features)
+                        tag_score = tagger.marginal(tag, i)
+                        new_score = score + tag_score
+
+                        new_beam.append((new_score, tags + [tag]))
+
+                # Sort new beam candidates by score and keep the top `beam_width` entries
+                beam = sorted(new_beam, key=lambda x: x[0], reverse=True)[:beam_width]
+
+            # The highest-scoring sequence is the first in the sorted beam
+            best_score, best_tags = beam[0]
+            predictions.append(best_tags)
+
         return predictions
-    # def predict_with_beam_search(self, sentences: List[List[str]], model_path: str, beam_width: int = 3) -> List[List[str]]:
+ # @staticmethod
+    # def predict_crf(self, sentences: List[List[str]], model_path: str) -> List[List[str]]:
     #     tagger = pycrfsuite.Tagger()
     #     tagger.open(model_path)
-
-    #     # Extract possible tags from the model's state information
-    #     possible_tags = list(tagger.labels())
-
+        
     #     predictions = []
-
     #     for sentence in sentences:
-    #         # Extract features for the entire sentence
-    #         sentence_features = [self.word2features(sentence, i) for i in range(len(sentence))]
-
-    #         # Initialize beam with (score, path)
-    #         beam = [(0.0, [])]  # (log-probability, list of tags)
-
-    #         for i in range(len(sentence)):
-    #             new_beam = []
-
-    #             # For each sequence in the beam, expand it by adding one more tag
-    #             for score, tags in beam:
-    #                 for tag in possible_tags:
-    #                     # Calculate the marginal probability of the tag at position i
-    #                     tagger.set(sentence_features)
-    #                     tag_score = tagger.marginal(tag, i)
-    #                     new_score = score + tag_score
-
-    #                     new_beam.append((new_score, tags + [tag]))
-
-    #             # Sort new beam candidates by score and keep the top `beam_width` entries
-    #             beam = sorted(new_beam, key=lambda x: x[0], reverse=True)[:beam_width]
-
-    #         # The highest-scoring sequence is the first in the sorted beam
-    #         best_score, best_tags = beam[0]
-    #         predictions.append(best_tags)
-
+    #         features = self.sent2features(sentence)
+    #         predicted_tags = tagger.tag(features)
+    #         predictions.append(predicted_tags)
+        
     #     return predictions
-
-# Example usage
-crf_tagger = CRFPosTagger()
-
-# Load your resources (frequency map, cluster map, lemmatizer) if available
-try:
-    crf_tagger.load_resources('/home/nikita/crf_pos/assignment_1/assets/freq_map.pkl', 
-                               '/home/nikita/crf_pos/assignment_1/assets/cluster_map.pkl', 
-                               '/home/nikita/crf_pos/assignment_1/assets/lemmatizer.pkl')
-except FileNotFoundError:
-    print("Resource files not found. They will be created during training.")
-
-# Train your model with your training data
-# data should be in the format: List[Tuple[List[str], List[str]]]
-# where each Tuple contains (sentence, tags)
-# crf_tagger.train_crf(data)
-
-# Predict using the trained model
-# sentences should be in the format: List[List[str]]
-# predictions = crf_tagger.predict_crf(sentences, '/home/nikita/crf_pos/assignment_1/assets/crf_model.crfsuite')
