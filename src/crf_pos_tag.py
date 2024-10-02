@@ -5,7 +5,7 @@ import pickle
 from collections import defaultdict
 import nltk
 nltk.download('wordnet')
-nltk.data.path.append('/home/nikita/crf_pos/assignment_1/assets/data')
+nltk.data.path.append('assets/data')
 
 def load_brown_corpus(path: str) -> Tuple[List[List[str]], List[List[str]]]:
     df = pd.read_csv(path, sep="\t")
@@ -97,7 +97,7 @@ class CRFPosTagger:
     def predict_crf(self, sentences: List[List[str]], model_path: str, beam_width: int = 2) -> List[List[str]]:
         tagger = pycrfsuite.Tagger()
         tagger.open(model_path)
-        self.load_resources('/home/nikita/crf_pos/assignment_1/assets/freq_map.pkl')
+        self.load_resources('assets/freq_map.pkl')
         
         # Extract possible tags from the model's state information
         possible_tags = list(tagger.labels())
