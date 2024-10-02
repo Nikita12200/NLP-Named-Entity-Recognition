@@ -4,21 +4,12 @@ import pycrfsuite
 from src.crf_pos_tag import CRFPosTagger
 
 
-# def process_string(input_string: str) -> str:
-#     return input_string[::-1]
-
-
-# @st.cache_resource
-# def load_model(path: str) -> CRFPosTagger:
-#     return CRFPosTagger.load_model(path)
 
 
 def main(args: argparse.Namespace):
     st.title("CRF Based Parts of Speech Tagging")
     st.image("./assets/logo.png")
 
-    # Load the model
-    # model = load_model(args.model_path)
     model = pycrfsuite.Tagger()
     model.open(args.model_path)
     # Input text

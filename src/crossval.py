@@ -10,6 +10,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pycrfsuite
 plt.ion()
 def evaluate_predictions(test_tagseqs, test_preds, all_labels,fold_idx):
 
@@ -57,15 +58,17 @@ def main(args: argparse.Namespace):
     ):
         print(f"Evaluating Fold {fold_idx + 1}/{args.k}")
 
-        train_ds = [dataset[idx] for idx in train_ids]
-        test_ds = [dataset[idx] for idx in test_ids]
+        train_ds = [dataset[idx] for idx in train_ids][:500]
+        test_ds = [dataset[idx] for idx in test_ids][:100]
 
         tagger = CRFPosTagger()
         tagger.train_crf(train_ds)
+        # tagseqs = tagger.predict_crf(test_ds, args.model_path)
+
 
         test_tagseqs = [tagseq for _, tagseq in test_ds]
         test_preds = tagger.predict_crf([wordseq for wordseq, _ in test_ds], args.model_path)
-
+        
         accuracy, precision, recall, f, cm, class_report = evaluate_predictions(
             test_tagseqs, test_preds, all_labels,fold_idx
         )
