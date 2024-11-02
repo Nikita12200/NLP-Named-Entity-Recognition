@@ -1,0 +1,9 @@
+=== Script Execution Started ===
+Running main_ner.py with the following parameters:
+Data file: assets/data/train.txt
+Model save path: assets/nei_model.sav
+[nltk_data] Downloading package stopwords to /home/nikita/nltk_data...
+[nltk_data]   Package stopwords is already up-to-date!
+[nltk_data] Downloading package wordnet to /home/nikita/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+.........
