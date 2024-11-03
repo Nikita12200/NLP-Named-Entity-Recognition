@@ -45,10 +45,10 @@ class ner_tag:
             tokens = d["tokens"]
             
             for i in range(len(tokens)):
-                prev_w = tokens[i - 1] if i > 0 else None
-                next_w = tokens[i + 1] if i < len(tokens) - 1 else None
-                x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)),prev_w=prev_w, next_w=next_w)
-                # x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)))
+                # prev_w = tokens[i - 1] if i > 0 else None
+                # next_w = tokens[i + 1] if i < len(tokens) - 1 else None
+                # x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)),prev_w=prev_w, next_w=next_w)
+                x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)))
 
                 if tags[i] <= 0:
                     y = 0
@@ -61,7 +61,7 @@ class ner_tag:
         features = np.asarray(features, dtype=np.float32)
         labels = np.asarray(labels, dtype=np.float32)
         # print(words[:5])
-        print(labels[:100])
+        # print(labels[:100])
         return words, features, labels
     
     def train_createData(self, data, downsample_ratio = 0.5):
@@ -76,12 +76,12 @@ class ner_tag:
             tokens = d["tokens"]
             
             for i in range(len(tokens)):
-                if tags[i] <= 0 and np.random.rand() > downsample_ratio:
-                    continue
-                prev_w = tokens[i - 1] if i > 0 else None
-                next_w = tokens[i + 1] if i < len(tokens) - 1 else None
-                x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)),prev_w=prev_w, next_w=next_w)
-                # x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)))
+                # if tags[i] <= 0 and np.random.rand() > downsample_ratio:
+                #     continue
+                # prev_w = tokens[i - 1] if i > 0 else None
+                # next_w = tokens[i + 1] if i < len(tokens) - 1 else None
+                # x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)),prev_w=prev_w, next_w=next_w)
+                x = self.vectorize(w=tokens[i], scaled_position=(i/len(tokens)))
                 if tags[i] <= 0:
                     y = 0
                     class_0=class_0+1
@@ -132,7 +132,7 @@ class ner_tag:
         else:
             tokens = sentence
             
-        print(tokens[:100])
+        # print(tokens[:100])
         features = [self.vectorize(w=tokens[i], scaled_position=(i / len(tokens))) for i in range(len(tokens))]
         features = np.asarray(features, dtype=np.float32)
         scaled_features = scaler.transform(features)
