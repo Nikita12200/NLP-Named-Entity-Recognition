@@ -11,7 +11,9 @@ import numpy as np
 
 def main(args: argparse.Namespace):
     # Load the test dataset
-    data = load_dataset("Davlan/conll2003_noMISC")
+    # data = load_dataset("Davlan/conll2003_noMISC")
+    data = load_dataset("conll2003")
+
     data_test = data["test"]
     # print(data_test[:5])
     # Initialize the NER tagger
