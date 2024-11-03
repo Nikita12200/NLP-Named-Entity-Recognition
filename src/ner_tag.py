@@ -12,6 +12,14 @@ nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.data.path.append('assets/data')
 
+noun_suffix = ["action", "age", "ance", "cy", "dom", "ee", "ence", "er", 
+               "hood", "ion", "ism", "ist", "ity", "ling", "ment", "ness", 
+               "or", "ry", "scape", "ship", "ty"]
+verb_suffix = ["ate", "ify", "ise", "ize", "ed", "ing"]
+adj_suffix = ["able", "ese", "ful", "i", "ian", "ible", "ic", "ish", 
+              "ive", "less", "ous"]
+adv_suffix = ["ward", "wards", "wise", "ly"]
+
 class ner_tag:
     def __init__(self):
         self.SEED = 0
@@ -19,20 +27,69 @@ class ner_tag:
         self.SW = stopwords.words("english")
         self.PUNCT = list(punctuation)
 
-    def vectorize(self, w, scaled_position,prev_w=None, next_w=None):
-        v = np.zeros(self.Features_count + 2).astype(np.float32)  # +2 for prev_title and next_title
+    # def vectorize(self, w, scaled_position,prev_w=None, next_w=None):
+    #     v = np.zeros(self.Features_count + 2).astype(np.float32)  # +2 for prev_title and next_title
+    #     title = 1 if w[0].isupper() else 0
+    #     allcaps = 1 if w.isupper() else 0
+    #     sw = 1 if w.lower() in self.SW else 0
+    #     punct = 1 if w in self.PUNCT else 0
+
+    #     # Add new features for previous and next words
+    #     prev_title = 1 if prev_w and prev_w[0].isupper() else 0
+    #     next_title = 1 if next_w and next_w[0].isupper() else 0
+
+    #     return [title, allcaps, len(w), sw, punct, scaled_position, prev_title, next_title]
+    #     # return [title, allcaps, len(w), sw, punct, scaled_position]
+    
+    def vectorize(self, w, scaled_position, prev_w=None, next_w=None):
+        # Initialize the vector with additional features
+        v = np.zeros(self.Features_count + 12).astype(np.float32)  # +12 for new features
+
+        # Original features
         title = 1 if w[0].isupper() else 0
         allcaps = 1 if w.isupper() else 0
         sw = 1 if w.lower() in self.SW else 0
         punct = 1 if w in self.PUNCT else 0
+        word_length = len(w)
+        
+        # New features from word_features
+        is_numeric = int(w.isdigit())
+        contains_number = int(any(char.isdigit() for char in w))
+        is_punctuation = int(any(char in self.PUNCT for char in w))
+        has_noun_suffix = int(any(w.endswith(suffix) for suffix in noun_suffix))
+        has_verb_suffix = int(any(w.endswith(suffix) for suffix in verb_suffix))
+        has_adj_suffix = int(any(w.endswith(suffix) for suffix in adj_suffix))
+        has_adv_suffix = int(any(w.endswith(suffix) for suffix in adv_suffix))
+        
+        # prev_pos_tag = -1 if prev_w is None else pos_tags[i - 1]  # Assuming pos_tags is available in scope
+        # next_pos_tag = -1 if next_w is None else pos_tags[i + 1]  # Assuming pos_tags is available in scope
 
-        # Add new features for previous and next words
+        # Handle previous and next words
         prev_title = 1 if prev_w and prev_w[0].isupper() else 0
         next_title = 1 if next_w and next_w[0].isupper() else 0
+        # is_capitalized = int(w[0].isupper())
+        # is_all_caps = int(w.isupper())
+        # is_all_lower = int(w.islower())
+        
+        # Populate the feature vector
+        v[0] = title
+        v[1] = allcaps
+        v[2] = word_length
+        v[3] = sw
+        v[4] = punct
+        v[5] = scaled_position
+        # v[6] = prev_title
+        # v[7] = next_title
+        v[6] = is_numeric
+        v[7] = contains_number
+        v[8] = is_punctuation
+        v[9] = has_noun_suffix
+        v[10] = has_verb_suffix
+        v[11] = has_adj_suffix
+        v[12] = has_adv_suffix
+        # Additional features can be added as needed
 
-        return [title, allcaps, len(w), sw, punct, scaled_position, prev_title, next_title]
-        # return [title, allcaps, len(w), sw, punct, scaled_position]
-    
+        return v
 
     def createData(self, data, ):
         # print(data[:5])

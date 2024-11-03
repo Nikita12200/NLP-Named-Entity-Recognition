@@ -58,8 +58,9 @@ def main(args: argparse.Namespace):
 
     # Make predictions on the test set
     Y_pred, _ = ner_tagger.infer(words_test, args.nei_model_path, args.scaler_model_path,flag = 1)
-    print(Y_pred[:10])
-    print(Y_test[:10])
+    print(words_test[:50])
+    print(Y_test[:50])
+    print(Y_pred[:50])
     if isinstance(Y_pred[0], (list, np.ndarray)):
         Y_pred = [tag for tags in Y_pred for tag in tags]
         Y_test = [tag for tags in Y_test for tag in tags]
