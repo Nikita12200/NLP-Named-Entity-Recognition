@@ -41,7 +41,7 @@ def main(args: argparse.Namespace):
     # data = load_dataset("Davlan/conll2003_noMISC")
     data = load_dataset("conll2003")
 
-    data_test = data["test"]
+    data_test = data["validation"]
 
     # Initialize the NER tagger
     ner_tagger = ner_tag()
